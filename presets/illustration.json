@@ -1,0 +1,11 @@
+{
+  "name": "图鉴数据",
+  "category": "图鉴数据",
+  "description": "解析图鉴/收集品配置，对应 IllustrationFileDataTableConfig 的 Excel 结构",
+  "columns": ["图鉴ID", "名称", "类型", "稀有度", "描述", "解锁条件", "图标路径"],
+  "template": "图鉴ID: ill_001\n名称: 古老的书卷\n类型: 道具\n稀有度: R\n描述: 一本泛黄的古书，记载着失落的传说。\n解锁条件: 完成章节1\n图标: Icons/items/book_ancient",
+  "rules": "## 解析规则（图鉴数据 → IllustrationFileDataTableConfig 表格）\n\n### 输入格式\n\n| 字段 | 说明 | 必填 |\n|------|------|------|\n| 图鉴ID | 图鉴唯一标识 | ✅ |\n| 名称 | 图鉴物品名称 | ✅ |\n| 类型 | 物品类型（道具/装备/角色/场景等） | ✅ |\n| 稀有度 | N/R/SR/SSR | ✅ |\n| 描述 | 图鉴文字描述 | ❌ |\n| 解锁条件 | 获取该图鉴的条件 | ❌ |\n| 图标路径 | 图标资源路径 | ❌ |",
+  "exampleInput": "图鉴ID: ill_001\n名称: 古老的书卷\n类型: 道具\n稀有度: R\n描述: 一本泛黄的古书，记载着失落的传说。\n解锁条件: 完成章节1\n图标: Icons/items/book_ancient\n\n图鉴ID: ill_002\n名称: 月光之剑\n类型: 装备\n稀有度: SR\n描述: 沐浴月光锻造的利剑，剑身散发着淡淡的银光。\n解锁条件: 角色好感度达到Lv.5\n图标: Icons/equip/sword_moonlight",
+  "exampleOutput": "[{\"图鉴ID\":\"ill_001\",\"名称\":\"古老的书卷\",\"类型\":\"道具\",\"稀有度\":\"R\",\"描述\":\"一本泛黄的古书，记载着失落的传说。\",\"解锁条件\":\"完成章节1\",\"图标路径\":\"Icons/items/book_ancient\"}]",
+  "version": "1.0"
+}

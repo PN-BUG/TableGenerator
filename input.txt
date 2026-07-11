@@ -1,0 +1,20 @@
+节点名称: ch1_start
+角色: 小美
+内容: 你终于来了...我等你好久了。
+命令: 无
+BGM: bgm_sad_piano
+图片: mei_sad
+图片类型: 立绘
+
+节点名称: ch1_start_02
+角色: 主角
+内容: 抱歉让你久等了。
+命令: 小提示
+命令参数: 解锁新概念：IOA,呼出界面,(IOA)
+
+节点名称: ch1_meet
+角色: 小美
+内容: 没关系...你来了就好。
+命令: 无
+BGM: bgm_sad_piano
+选项: opt_ask / opt_silent

@@ -1,0 +1,11 @@
+{
+  "presets": [
+    "default.json",
+    "script-dialogue.json",
+    "option-config.json",
+    "f-table.json",
+    "battle-character.json",
+    "illustration.json",
+    "markdown-table.json"
+  ]
+}

@@ -1,0 +1,1909 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🔢 表格生成器 - Table Generator</title>
+<style>
+/* ========== CSS Variables & Reset ========== */
+:root {
+    --bg-primary: #1e1e2e;
+    --bg-secondary: #252536;
+    --bg-tertiary: #2a2a3d;
+    --bg-hover: #313145;
+    --bg-input: #1a1a2a;
+    --text-primary: #cdd6f4;
+    --text-secondary: #a6adc8;
+    --text-muted: #6c7086;
+    --accent: #89b4fa;
+    --accent-hover: #74a8f7;
+    --success: #a6e3a1;
+    --warning: #f9e2af;
+    --error: #f38ba8;
+    --border: #45475a;
+    --border-light: #363849;
+    --radius: 8px;
+    --radius-sm: 4px;
+    --shadow: 0 2px 8px rgba(0,0,0,0.3);
+    --font-mono: 'Cascadia Code', 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    --font-sans: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    --transition: 0.2s ease;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: var(--font-sans);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    height: 100vh;
+    display: flex;
+    overflow: hidden;
+}
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* ========== Sidebar ========== */
+.sidebar {
+    width: 260px;
+    min-width: 260px;
+    background: var(--bg-secondary);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    user-select: none;
+}
+.sidebar-header {
+    padding: 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.sidebar-header h2 { font-size: 16px; font-weight: 600; }
+.sidebar-header .badge {
+    font-size: 11px;
+    background: var(--accent);
+    color: var(--bg-primary);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 600;
+}
+.preset-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px;
+}
+.preset-category { margin-bottom: 4px; }
+.preset-category-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 600;
+    transition: background var(--transition);
+}
+.preset-category-header:hover { background: var(--bg-hover); }
+.preset-category-header .arrow { font-size: 10px; transition: transform var(--transition); }
+.preset-category-header.collapsed .arrow { transform: rotate(-90deg); }
+.preset-category-items { padding-left: 8px; }
+.preset-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    transition: background var(--transition);
+    position: relative;
+}
+.preset-item:hover { background: var(--bg-hover); }
+.preset-item.active { background: var(--bg-tertiary); color: var(--accent); }
+.preset-item .icon { font-size: 16px; }
+.preset-item .name { flex: 1; }
+.preset-item .actions { display: none; gap: 4px; }
+.preset-item:hover .actions { display: flex; }
+.preset-item .btn-icon {
+    width: 22px; height: 22px;
+    border: none; background: transparent;
+    color: var(--text-muted); cursor: pointer;
+    border-radius: var(--radius-sm); font-size: 12px;
+    display: flex; align-items: center; justify-content: center;
+}
+.preset-item .btn-icon:hover { background: var(--bg-hover); color: var(--text-primary); }
+.sidebar-footer {
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+}
+.sidebar-footer button { flex: 1; }
+
+/* ========== Main Content ========== */
+.main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+.toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-secondary);
+    flex-shrink: 0;
+}
+.toolbar .title { font-size: 15px; font-weight: 600; flex: 1; }
+.toolbar .preset-info {
+    font-size: 12px;
+    color: var(--text-muted);
+    background: var(--bg-tertiary);
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+}
+
+/* ========== Content Area ========== */
+.content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 16px;
+    gap: 12px;
+}
+.panel {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+.panel-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border-light);
+    font-size: 13px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+.panel-header .panel-icon { font-size: 16px; }
+.panel-header .panel-actions { margin-left: auto; display: flex; gap: 4px; }
+
+/* ========== Input Panel ========== */
+.input-panel { flex: 1; min-height: 150px; }
+.input-area {
+    flex: 1;
+    background: var(--bg-input);
+    border: none;
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    line-height: 1.6;
+    padding: 14px;
+    resize: none;
+    outline: none;
+    tab-size: 4;
+}
+.input-area::placeholder { color: var(--text-muted); }
+.input-template-hint {
+    padding: 8px 14px;
+    font-size: 11px;
+    color: var(--text-muted);
+    border-top: 1px solid var(--border-light);
+    background: var(--bg-tertiary);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+/* ========== Table Panel ========== */
+.table-panel { flex: 2; min-height: 200px; }
+.table-wrapper {
+    flex: 1;
+    overflow: auto;
+    position: relative;
+}
+.table-wrapper table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+.table-wrapper thead {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+.table-wrapper th {
+    background: var(--bg-tertiary);
+    padding: 8px 12px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 12px;
+    color: var(--accent);
+    border-bottom: 2px solid var(--border);
+    white-space: nowrap;
+    min-width: 80px;
+}
+.table-wrapper th .col-drag {
+    cursor: col-resize;
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+}
+.table-wrapper td {
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--border-light);
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.table-wrapper td.editing {
+    white-space: normal;
+    padding: 2px;
+}
+.table-wrapper td input {
+    width: 100%;
+    background: var(--bg-input);
+    border: 2px solid var(--accent);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    padding: 4px 8px;
+    outline: none;
+}
+.table-wrapper td select {
+    width: 100%;
+    background: var(--bg-input);
+    border: 2px solid var(--accent);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    padding: 4px 8px;
+    outline: none;
+    cursor: pointer;
+}
+.table-wrapper tr:hover td { background: var(--bg-hover); }
+.table-wrapper tr.row-selected td { background: rgba(137, 180, 250, 0.08); }
+.table-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-muted);
+    gap: 8px;
+    font-size: 14px;
+}
+.table-empty .empty-icon { font-size: 48px; opacity: 0.5; }
+.row-index {
+    color: var(--text-muted);
+    font-size: 11px;
+    text-align: center;
+    min-width: 40px;
+    width: 40px;
+    user-select: none;
+}
+
+/* ========== Enum Validation ========== */
+.table-wrapper td.enum-warn {
+    position: relative;
+    background: rgba(249, 226, 175, 0.08);
+}
+.table-wrapper td.enum-warn::after {
+    content: '⚠';
+    position: absolute;
+    top: 2px;
+    right: 4px;
+    font-size: 10px;
+    color: var(--warning);
+    opacity: 0.8;
+}
+.table-wrapper td.enum-warn:hover::after {
+    opacity: 1;
+}
+.table-wrapper td.enum-match {
+    color: var(--success);
+}
+.table-wrapper td.param-hint {
+    border-left: 2px solid var(--accent);
+    cursor: help;
+}
+.table-wrapper td.param-hint:hover {
+    background: rgba(137, 180, 250, 0.06);
+}
+.edit-fmt-hint {
+    font-size: 11px;
+    color: var(--text-secondary);
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 6px 8px;
+    margin-bottom: 4px;
+    line-height: 1.5;
+    max-width: 280px;
+    word-break: break-all;
+}
+.edit-fmt-hint b { color: var(--accent); }
+.edit-fmt-hint code {
+    color: var(--success);
+    font-family: var(--font-mono);
+    font-size: 11px;
+}
+.edit-fmt-hint i { color: var(--text-muted); font-style: normal; }
+
+/* ========== Buttons ========== */
+.btn {
+    padding: 6px 14px;
+    border: 1px solid var(--border);
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 12px;
+    font-family: var(--font-sans);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all var(--transition);
+    white-space: nowrap;
+}
+.btn:hover { background: var(--bg-hover); border-color: var(--text-muted); }
+.btn-primary { background: var(--accent); color: var(--bg-primary); border-color: var(--accent); font-weight: 600; }
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-accent { background: transparent; color: var(--success); border-color: var(--success); }
+.btn-accent:hover { background: var(--success); color: var(--bg-primary); }
+.btn-success { background: var(--success); color: var(--bg-primary); border-color: var(--success); }
+.btn-warning { background: var(--warning); color: var(--bg-primary); border-color: var(--warning); }
+.btn-danger { background: var(--error); color: var(--bg-primary); border-color: var(--error); }
+.btn-sm { padding: 4px 10px; font-size: 11px; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ========== Toast ========== */
+.toast-container {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.toast {
+    padding: 10px 16px;
+    border-radius: var(--radius);
+    font-size: 13px;
+    animation: slideIn 0.3s ease;
+    box-shadow: var(--shadow);
+    max-width: 360px;
+}
+.toast-success { background: #1a3a2a; border: 1px solid var(--success); color: var(--success); }
+.toast-error { background: #3a1a2a; border: 1px solid var(--error); color: var(--error); }
+.toast-info { background: #1a2a3a; border: 1px solid var(--accent); color: var(--accent); }
+@keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+/* ========== Modal ========== */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.2s ease;
+}
+.modal {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    width: 560px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
+.modal-header {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+}
+.modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.modal-footer {
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+.modal label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.modal input, .modal textarea, .modal select {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    color: var(--text-primary);
+    border-radius: var(--radius-sm);
+    padding: 8px 10px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    outline: none;
+}
+.modal input:focus, .modal textarea:focus, .modal select:focus { border-color: var(--accent); }
+.modal textarea { resize: vertical; min-height: 100px; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* ========== Drag & Drop ========== */
+.drop-zone {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    text-align: center;
+    color: var(--text-muted);
+    transition: all var(--transition);
+    cursor: pointer;
+}
+.drop-zone:hover, .drop-zone.drag-over { border-color: var(--accent); color: var(--accent); }
+
+/* ========== Resizer ========== */
+.resizer {
+    height: 3px;
+    background: var(--border);
+    cursor: row-resize;
+    flex-shrink: 0;
+    transition: background var(--transition);
+}
+.resizer:hover, .resizer.active { background: var(--accent); }
+
+/* ========== Sheet Tabs ========== */
+.sheet-tab {
+    padding: 2px 14px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
+    transition: all var(--transition);
+    white-space: nowrap;
+    border: 1px solid transparent;
+}
+.sheet-tab:hover { background: var(--bg-hover); color: var(--text-primary); border-color: var(--border); }
+.sheet-tab.active { background: var(--accent); color: var(--bg-primary); border-color: var(--accent); }
+.sheet-tab .badge {
+    font-size: 10px;
+    margin-left: 4px;
+    opacity: 0.8;
+}
+
+/* ========== Responsive ========== */
+@media (max-width: 768px) {
+    .sidebar { width: 200px; min-width: 200px; }
+    .modal { width: 90vw; }
+}
+</style>
+</head>
+<body>
+
+<!-- ====== Sidebar ====== -->
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <h2>📋 预设管理</h2>
+        <span class="badge" id="presetCount">0</span>
+    </div>
+    <div class="preset-list" id="presetList">
+        <!-- Dynamic preset list -->
+    </div>
+    <div class="sidebar-footer">
+        <button class="btn btn-primary btn-sm" onclick="PresetManager.openCreateModal()" title="新建预设">＋ 新建</button>
+        <button class="btn btn-sm" onclick="PresetManager.importFromFile()" title="从文件导入预设">📥 导入</button>
+    </div>
+</aside>
+
+<!-- ====== Main ====== -->
+<div class="main">
+    <!-- Toolbar -->
+    <div class="toolbar">
+        <span class="title">🔢 表格生成器</span>
+        <span class="preset-info" id="currentPresetInfo">未选择预设</span>
+        <button class="btn btn-sm" onclick="App.toggleSidebar()" title="切换侧栏">☰</button>
+    </div>
+
+    <!-- Content -->
+    <div class="content" id="contentArea">
+        <!-- Input Panel -->
+        <div class="panel input-panel" id="inputPanel">
+            <div class="panel-header">
+                <span class="panel-icon">📝</span> 文本输入
+                <div class="panel-actions">
+                    <button class="btn btn-sm" onclick="App.copyInputToClipboard()" title="复制输入文本到剪贴板">📋 复制</button>
+                    <button class="btn btn-sm" onclick="App.clearInput()" title="清空输入">🗑 清空</button>
+                    <button class="btn btn-sm btn-accent" onclick="App.runScript()" title="用当前预设的内置脚本解析文本，直接生成表格">🔧 脚本解析</button>
+                    <button class="btn btn-sm btn-primary" onclick="App.sendToCopilot()" title="生成 Copilot 提示词，粘贴到 VS Code Copilot 聊天中">🤖 发送到 Copilot</button>
+                </div>
+            </div>
+            <textarea class="input-area" id="inputText" placeholder="在此输入结构化文本...&#10;&#10;根据左侧选中的预设模板格式输入，然后点击「发送到 Copilot」生成表格。"></textarea>
+            <div class="input-template-hint" id="templateHint">
+                💡 选择预设后，此处会显示输入模板提示
+            </div>
+        </div>
+
+        <!-- Resizer -->
+        <div class="resizer" id="resizer" title="拖动调整面板大小"></div>
+
+        <!-- Table Panel -->
+        <div class="panel table-panel" id="tablePanel">
+            <div class="panel-header">
+                <span class="panel-icon">📊</span> 表格预览
+                <span id="sheetTabs" style="display:flex;gap:4px;margin:0 8px;"></span>
+                <span id="rowCount" style="font-size:11px;color:var(--text-muted);margin-left:4px;"></span>
+                <div class="panel-actions">
+                    <button class="btn btn-sm" onclick="TableRenderer.addRow()" title="添加空行">＋ 行</button>
+                    <button class="btn btn-sm" onclick="TableRenderer.addColumn()" title="添加列">＋ 列</button>
+                    <button class="btn btn-sm" onclick="App.pasteJSON()" title="从剪贴板粘贴 JSON 表格数据">📥 粘贴 JSON</button>
+                    <button class="btn btn-sm" onclick="App.correctTable()" title="AI 纠错：分析表格数据问题">🔧 纠错</button>
+                    <span style="color:var(--border);margin:0 4px;">|</span>
+                    <button class="btn btn-sm" onclick="App.exportCSV()">📤 CSV</button>
+                    <button class="btn btn-sm" onclick="App.exportJSON()">📤 JSON</button>
+                    <button class="btn btn-sm" onclick="App.copyTable()">📋 复制表格</button>
+                </div>
+            </div>
+            <div class="table-wrapper" id="tableWrapper">
+                <div class="table-empty" id="tableEmpty">
+                    <span class="empty-icon">📊</span>
+                    <span>暂无表格数据</span>
+                    <span style="font-size:12px;">输入文本后点击「发送到 Copilot」→ 在 Copilot 中生成 →「粘贴 JSON」</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ====== Toast Container ====== -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ====== Preset Edit Modal ====== -->
+<div class="modal-overlay" id="presetModal" style="display:none;">
+    <div class="modal">
+        <div class="modal-header">
+            <span id="presetModalTitle">📋 新建预设</span>
+            <button class="btn btn-sm" onclick="PresetManager.closeModal()" style="margin-left:auto;">✕</button>
+        </div>
+        <div class="modal-body">
+            <label>预设名称 <input type="text" id="presetName" placeholder="如：剧情对话"></label>
+            <label>所属分类 <input type="text" id="presetCategory" placeholder="如：对话数据" list="categoryList"></label>
+            <datalist id="categoryList"></datalist>
+            <label>描述 <input type="text" id="presetDesc" placeholder="简要描述此预设的用途"></label>
+            <label>表格列名（逗号分隔） <input type="text" id="presetColumns" placeholder="节点名称,角色名称,对话内容,命令类型"></label>
+            <label>输入模板 <textarea id="presetTemplate" placeholder="节点名称: {{节点名称}}&#10;角色: {{角色名称}}&#10;内容: {{对话内容}}"></textarea></label>
+            <label>AI 解析规则（Markdown） <textarea id="presetRules" placeholder="## 解析规则&#10;&#10;1. 每行以「节点名称:」开头&#10;2. 字段名与值的分隔符为「: 」&#10;3. 空行分隔不同记录..." style="min-height:150px;"></textarea></label>
+            <label>示例输入 <textarea id="presetExampleInput" placeholder="节点名称: chapter1_node1&#10;角色: 小美&#10;内容: 你好！" style="min-height:80px;"></textarea></label>
+            <label>示例输出 (JSON) <textarea id="presetExampleOutput" placeholder='[{"节点名称":"chapter1_node1","角色名称":"小美","对话内容":"你好！"}]' style="min-height:80px;"></textarea></label>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-danger btn-sm" id="btnDeletePreset" style="display:none;margin-right:auto;" onclick="PresetManager.deleteCurrent()">🗑 删除预设</button>
+            <button class="btn btn-sm" onclick="PresetManager.closeModal()">取消</button>
+            <button class="btn btn-primary btn-sm" onclick="PresetManager.savePreset()">💾 保存</button>
+        </div>
+    </div>
+</div>
+
+<script src="builtin-presets.js"></script>
+<script>
+// ============================================================
+// 🔢 表格生成器 - Table Generator
+// 通过 GitHub Copilot AI 聊天识别文本并生成结构化表格
+// ============================================================
+
+// ========== Toast 通知 ==========
+const Toast = {
+    show(msg, type = 'info', duration = 3000) {
+        const container = document.getElementById('toastContainer');
+        const el = document.createElement('div');
+        el.className = `toast toast-${type}`;
+        el.textContent = msg;
+        container.appendChild(el);
+        setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity 0.3s'; setTimeout(() => el.remove(), 300); }, duration);
+    }
+};
+
+// ========== 预设数据模型 ==========
+const DEFAULT_PRESET = {
+    name: '默认通用',
+    category: '通用',
+    description: '通用表格解析预设，支持键值对格式的文本输入',
+    columns: ['字段名', '值'],
+    template: '字段名1: 值1\n字段名2: 值2\n---\n字段名1: 值3\n字段名2: 值4',
+    rules: `## 解析规则
+1. 输入文本由多条记录组成，记录之间用 \`---\` 或空行分隔
+2. 每条记录由多行 \`字段名: 值\` 格式的键值对组成
+3. 所有记录共享相同的字段名集合（由第一条记录决定列名）
+4. 冒号后面可以有空格，解析时自动 trim
+5. 支持多行值：以空格缩进的行视为上一字段的续行`,
+    exampleInput: '姓名: 张三\n年龄: 25\n职业: 程序员\n---\n姓名: 李四\n年龄: 30\n职业: 设计师',
+    exampleOutput: '[{"姓名":"张三","年龄":"25","职业":"程序员"},{"姓名":"李四","年龄":"30","职业":"设计师"}]',
+    version: '1.0'
+};
+
+// ========== 应用状态 ==========
+const App = {
+    presets: {},
+    currentPresetKey: null,
+    sheets: [],           // [{name, columns, data}, ...] 多Sheet支持
+    activeSheetIndex: 0,  // 当前激活的Sheet索引
+    sidebarVisible: true,
+
+    // 初始化
+    async init() {
+        this.setupResizer();
+        this.setupDragDrop();
+        // 监听粘贴JSON快捷键 Ctrl+Shift+V
+        document.addEventListener('keydown', e => {
+            if (e.ctrlKey && e.shiftKey && e.key === 'V') {
+                e.preventDefault();
+                this.pasteJSON();
+            }
+            if (e.ctrlKey && e.shiftKey && e.key === 'C') {
+                // 由 Copilot 触发：复制输入文本并生成提示词
+                if (document.activeElement === document.getElementById('inputText')) {
+                    e.preventDefault();
+                    this.sendToCopilot();
+                }
+            }
+        });
+        await this.loadPresets();
+        Toast.show('表格生成器已就绪，选择预设开始使用', 'info');
+    },
+
+    // 加载所有预设（从内嵌数据 + localStorage 合并）
+    loadPresets() {
+        let loadedCount = 0;
+
+        // 1. 从内嵌 BUILTIN_PRESETS 加载（兼容 file:// 协议）
+        if (typeof BUILTIN_PRESETS !== 'undefined') {
+            for (const [key, preset] of Object.entries(BUILTIN_PRESETS)) {
+                if (preset && preset.name) {
+                    this.presets[preset.name] = preset;
+                    loadedCount++;
+                }
+            }
+        }
+
+        // 2. 合并 localStorage 中的用户自定义预设
+        const stored = localStorage.getItem('tg_presets');
+        if (stored) {
+            try {
+                const localPresets = JSON.parse(stored);
+                for (const key of Object.keys(localPresets)) {
+                    if (!this.presets[key]) {
+                        this.presets[key] = localPresets[key];
+                        loadedCount++;
+                    }
+                }
+            } catch (e) {
+                console.warn('解析 localStorage 预设失败', e);
+            }
+        }
+
+        // 确保有默认预设
+        if (Object.keys(this.presets).length === 0) {
+            this.presets['默认通用'] = { ...DEFAULT_PRESET };
+            loadedCount++;
+        }
+
+        Toast.show(`已加载 ${loadedCount} 个预设`, 'info', 3000);
+        PresetManager.render();
+    },
+
+    savePresets() {
+        localStorage.setItem('tg_presets', JSON.stringify(this.presets));
+    },
+
+    // 选择预设
+    selectPreset(key) {
+        this.currentPresetKey = key;
+        const preset = this.presets[key];
+        if (!preset) return;
+
+        document.getElementById('currentPresetInfo').textContent = `📌 ${preset.category} / ${preset.name}`;
+        document.getElementById('templateHint').innerHTML = `💡 模板：<code style="white-space:pre-wrap;color:var(--warning);">${this.escapeHtml(preset.template)}</code>`;
+
+        // 初始化多Sheet结构
+        this.initSheetsFromPreset(preset);
+        TableRenderer.render();
+
+        PresetManager.render();
+        Toast.show(`已选择预设：${preset.name}`, 'info');
+    },
+
+    // 复制输入文本
+    copyInputToClipboard() {
+        const text = document.getElementById('inputText').value;
+        if (!text.trim()) { Toast.show('输入为空', 'error'); return; }
+        navigator.clipboard.writeText(text).then(() => Toast.show('已复制到剪贴板', 'success'));
+    },
+
+    // 清空输入
+    clearInput() {
+        document.getElementById('inputText').value = '';
+        Toast.show('已清空', 'info');
+    },
+
+    // 生成 Copilot 提示词（支持多Sheet）
+    sendToCopilot() {
+        const text = document.getElementById('inputText').value;
+        if (!text.trim()) { Toast.show('请先输入文本', 'error'); return; }
+
+        const preset = this.currentPresetKey ? this.presets[this.currentPresetKey] : null;
+
+        let sheetsInfo = '';
+        if (preset && preset.sheets && preset.sheets.length > 0) {
+            sheetsInfo = preset.sheets.map(s =>
+                `### ${s.name}\n列：${s.columns.join('、')}`
+            ).join('\n\n');
+        } else if (preset) {
+            sheetsInfo = `列：${preset.columns.join('、')}`;
+        } else {
+            sheetsInfo = '自动检测';
+        }
+
+        const rules = preset ? preset.rules : '根据输入文本格式自动解析';
+        const example = preset ? preset.exampleOutput : '';
+
+        const prompt = `请将以下文本解析为多Sheet JSON 表格数据：
+
+【表格结构】
+${sheetsInfo}
+
+【解析规则】
+${rules}
+
+【示例输出格式】
+${example || '{"sheets":{"StoryData":{"columns":["列1","列2"],"data":[...]}}}'}
+
+【待解析文本】
+\`\`\`
+${text}
+\`\`\`
+
+请直接输出多Sheet JSON（格式：{"sheets":{"Sheet名":{"columns":[...],"data":[...]}}}），不要包含其他说明文字，确保 JSON 格式正确可解析。`;
+
+        navigator.clipboard.writeText(prompt).then(() => {
+            Toast.show('✅ Copilot 提示词已复制！请粘贴到 VS Code Copilot 聊天中', 'success', 5000);
+        });
+    },
+
+    // 粘贴 JSON（支持多Sheet格式）
+    async pasteJSON() {
+        try {
+            const text = await navigator.clipboard.readText();
+            let data;
+            try {
+                const match = text.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
+                data = JSON.parse(match ? match[1] : text);
+            } catch {
+                Toast.show('剪贴板内容不是有效的 JSON，请先从 Copilot 复制生成的 JSON', 'error');
+                return;
+            }
+
+            // 多Sheet格式：{ sheets: { "Sheet名": {columns, data}, ... } }
+            if (data.sheets && typeof data.sheets === 'object' && !Array.isArray(data.sheets)) {
+                this.sheets = [];
+                for (const [name, sheet] of Object.entries(data.sheets)) {
+                    this.sheets.push({
+                        name,
+                        columns: sheet.columns || [],
+                        data: sheet.data || []
+                    });
+                }
+                this.activeSheetIndex = 0;
+                TableRenderer.render();
+                const totalRows = this.sheets.reduce((sum, s) => sum + s.data.length, 0);
+                Toast.show(`✅ 已加载 ${this.sheets.length} 个Sheet，共 ${totalRows} 行`, 'success');
+                return;
+            }
+
+            // 旧格式兼容：数组 [...] 或 {columns, data}
+            if (!Array.isArray(data)) {
+                if (data.columns && Array.isArray(data.data)) {
+                    this.sheets = [{ name: 'Sheet1', columns: data.columns, data: data.data }];
+                } else {
+                    Toast.show('JSON 必须是数组 [...] 或 {columns, data} 或 {sheets:{...}} 格式', 'error');
+                    return;
+                }
+            } else {
+                const cols = data.length > 0 ? Object.keys(data[0]) : [];
+                this.sheets = [{ name: 'Sheet1', columns: cols, data: data }];
+            }
+            this.activeSheetIndex = 0;
+            TableRenderer.render();
+            Toast.show(`✅ 已加载 ${this.tableData.length} 行 ${this.columns.length} 列数据`, 'success');
+        } catch (e) {
+            Toast.show('无法读取剪贴板：' + e.message, 'error');
+        }
+    },
+
+    // 导出 CSV
+    exportCSV() {
+        if (this.tableData.length === 0) { Toast.show('无数据可导出', 'error'); return; }
+        const cols = this.columns;
+        let csv = '\uFEFF' + cols.join(',') + '\n';
+        for (const row of this.tableData) {
+            csv += cols.map(c => {
+                const v = String(row[c] ?? '');
+                return v.includes(',') || v.includes('"') || v.includes('\n') ? `"${v.replace(/"/g,'""')}"` : v;
+            }).join(',') + '\n';
+        }
+        this.downloadFile('table_export.csv', csv, 'text/csv;charset=utf-8');
+        Toast.show('CSV 已导出', 'success');
+    },
+
+    // 导出 JSON（多Sheet格式）
+    exportJSON() {
+        if (this.sheets.length === 0 || this.sheets.every(s => s.data.length === 0)) {
+            Toast.show('无数据可导出', 'error'); return;
+        }
+        const sheetsObj = {};
+        for (const sheet of this.sheets) {
+            sheetsObj[sheet.name] = { columns: sheet.columns, data: sheet.data };
+        }
+        const json = JSON.stringify({ sheets: sheetsObj }, null, 2);
+        this.downloadFile('table_export.json', json, 'application/json');
+        const totalRows = this.sheets.reduce((sum, s) => sum + s.data.length, 0);
+        Toast.show(`JSON 已导出（${this.sheets.length}个Sheet，${totalRows}行）`, 'success');
+    },
+
+    // 复制表格 (TSV格式)
+    copyTable() {
+        if (this.tableData.length === 0) { Toast.show('无数据可复制', 'error'); return; }
+        const cols = this.columns;
+        let tsv = cols.join('\t') + '\n';
+        for (const row of this.tableData) {
+            tsv += cols.map(c => String(row[c] ?? '').replace(/\t/g,' ').replace(/\n/g,' ')).join('\t') + '\n';
+        }
+        navigator.clipboard.writeText(tsv).then(() => Toast.show('表格已复制（TSV格式，可粘贴到Excel）', 'success'));
+    },
+
+    // 纠错 - 生成纠错提示词（支持多Sheet）
+    correctTable() {
+        if (this.sheets.length === 0 || this.sheets.every(s => s.data.length === 0)) {
+            Toast.show('无数据可纠错', 'error'); return;
+        }
+        const sheetsObj = {};
+        for (const sheet of this.sheets) {
+            sheetsObj[sheet.name] = { columns: sheet.columns, data: sheet.data };
+        }
+        const json = JSON.stringify({ sheets: sheetsObj }, null, 2);
+
+        const sheetsDesc = this.sheets.map(s =>
+            `### ${s.name}\n列：${s.columns.join('、')}（${s.data.length}行）`
+        ).join('\n');
+
+        const prompt = `请检查以下多Sheet表格数据的问题（格式错误、空值、不一致、Sheet间关联断裂等），并给出修正后的 JSON：
+
+【表结构】
+${sheetsDesc}
+
+【数据】
+\`\`\`json
+${json}
+\`\`\`
+
+请输出修正后的完整多Sheet JSON（格式：{"sheets":{"Sheet名":{"columns":[...],"data":[...]}}}）。`;
+
+        navigator.clipboard.writeText(prompt).then(() => {
+            Toast.show('🔧 纠错提示词已复制！请粘贴到 Copilot 中，然后将修正结果通过「粘贴 JSON」加载', 'success', 6000);
+        });
+    },
+
+    // 下载文件
+    downloadFile(filename, content, mimeType) {
+        const blob = new Blob([content], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+    },
+
+    // 切换侧栏
+    toggleSidebar() {
+        this.sidebarVisible = !this.sidebarVisible;
+        document.getElementById('sidebar').style.display = this.sidebarVisible ? '' : 'none';
+    },
+
+
+
+    // 面板拖拽调整
+    setupResizer() {
+        const resizer = document.getElementById('resizer');
+        const inputPanel = document.getElementById('inputPanel');
+        let startY, startHeight;
+        resizer.addEventListener('mousedown', e => {
+            startY = e.clientY;
+            startHeight = inputPanel.offsetHeight;
+            resizer.classList.add('active');
+            document.body.style.cursor = 'row-resize';
+            document.body.style.userSelect = 'none';
+        });
+        document.addEventListener('mousemove', e => {
+            if (!resizer.classList.contains('active')) return;
+            const dy = e.clientY - startY;
+            inputPanel.style.flex = 'none';
+            inputPanel.style.height = Math.max(80, startHeight + dy) + 'px';
+        });
+        document.addEventListener('mouseup', () => {
+            resizer.classList.remove('active');
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+        });
+    },
+
+    // 拖放导入
+    setupDragDrop() {
+        const body = document.body;
+        body.addEventListener('dragover', e => { e.preventDefault(); });
+        body.addEventListener('drop', async e => {
+            e.preventDefault();
+            const files = e.dataTransfer.files;
+            for (const file of files) {
+                if (file.name.endsWith('.json')) {
+                    try {
+                        const text = await file.text();
+                        const preset = JSON.parse(text);
+                        if (preset.name && preset.columns) {
+                            const key = preset.name;
+                            App.presets[key] = preset;
+                            App.savePresets();
+                            PresetManager.render();
+                            Toast.show(`✅ 已导入预设：${key}`, 'success');
+                        }
+                    } catch {}
+                }
+            }
+        });
+    },
+
+    escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    },
+
+    // 从预设初始化 Sheets 结构
+    initSheetsFromPreset(preset) {
+        if (preset.sheets && preset.sheets.length > 0) {
+            this.sheets = preset.sheets.map(s => ({
+                name: s.name,
+                columns: [...s.columns],
+                data: []
+            }));
+        } else {
+            this.sheets = [{
+                name: 'Sheet1',
+                columns: [...(preset.columns || [])],
+                data: []
+            }];
+        }
+        this.activeSheetIndex = 0;
+    },
+
+    // 切换激活的 Sheet
+    switchSheet(index) {
+        if (index >= 0 && index < this.sheets.length) {
+            this.activeSheetIndex = index;
+            TableRenderer.render();
+        }
+    },
+
+    // 脚本解析：用当前预设内置脚本解析文本框中的内容
+    runScript() {
+        const text = document.getElementById('inputText').value;
+        if (!text.trim()) { Toast.show('请先在文本框中输入要解析的内容', 'error'); return; }
+
+        const preset = this.currentPresetKey ? this.presets[this.currentPresetKey] : null;
+        if (!preset) { Toast.show('请先在左侧选择一个预设', 'error'); return; }
+
+        // 查找匹配的脚本
+        const result = ScriptEngine.run(preset.name, text, preset);
+        if (!result) {
+            Toast.show('当前预设没有内置解析脚本，请使用「🤖 发送到 Copilot」', 'error');
+            return;
+        }
+
+        if (result.error) {
+            Toast.show('解析失败：' + result.error, 'error');
+            return;
+        }
+
+        // 加载解析结果
+        if (result.sheets) {
+            this.sheets = result.sheets.map(s => ({
+                name: s.name,
+                columns: s.columns || [],
+                data: s.data || []
+            }));
+            this.activeSheetIndex = 0;
+            TableRenderer.render();
+            const totalRows = result.sheets.reduce((sum, s) => sum + (s.data ? s.data.length : 0), 0);
+            let msg = `✅ 脚本解析完成！${result.sheets.length} 个Sheet，共 ${totalRows} 行`;
+            // 显示自检 issues
+            if (result.issues && result.issues.length > 0) {
+                msg += `\n⚠️ ${result.issues.length} 条自检提醒：\n` + result.issues.join('\n');
+                console.warn('[脚本解析自检]', result.issues);
+            }
+            Toast.show(msg, result.issues && result.issues.length > 0 ? 'warning' : 'success');
+        }
+    },
+};
+
+// 计算属性：columns/tableData 始终指向当前激活 sheet
+Object.defineProperties(App, {
+    columns: {
+        get() { return this.activeSheet ? this.activeSheet.columns : []; },
+        set(v) { if (this.activeSheet) this.activeSheet.columns = v; }
+    },
+    tableData: {
+        get() { return this.activeSheet ? this.activeSheet.data : []; },
+        set(v) { if (this.activeSheet) this.activeSheet.data = v; }
+    },
+    activeSheet: {
+        get() { return this.sheets[this.activeSheetIndex]; }
+    }
+});
+
+// ========== 脚本解析引擎 ==========
+// 每个预设可对应一个解析函数，输入文本 → 输出 {sheets: [{name, columns, data}]}
+const ScriptEngine = {
+    // 脚本注册表：预设名 → 解析函数
+    _scripts: {},
+
+    // 注册一个脚本
+    register(name, fn) {
+        this._scripts[name] = fn;
+    },
+
+    // 运行脚本
+    run(presetName, text, preset) {
+        // 优先用注册的脚本
+        if (this._scripts[presetName]) {
+            return this._scripts[presetName](text, preset);
+        }
+        // 尝试用预设里存的 script 字段（JS 代码字符串）
+        if (preset && preset.script && typeof preset.script === 'string') {
+            try {
+                const fn = new Function('text', 'preset', preset.script);
+                this._scripts[presetName] = fn; // 缓存
+                return fn(text, preset);
+            } catch (e) {
+                return { error: '脚本执行异常：' + e.message };
+            }
+        }
+        return null;
+    },
+};
+
+// ---- 内置脚本：剧本对话解析 ----
+// 整合 AVG 配表 Agent 规则，严格对应 StoryTableConfig.cs 读取逻辑
+ScriptEngine.register('剧本对话解析', function(text, preset) {
+    const storyCols = preset.sheets ? preset.sheets.find(s => s.name === 'StoryData').columns : preset.columns;
+    const optionCols = preset.sheets ? preset.sheets.find(s => s.name === 'OptionData').columns : ['节点名称','选项名称','cmd命令','命令参数'];
+
+    function emptyRow() {
+        const r = {};
+        for (const c of storyCols) r[c] = '';
+        return r;
+    }
+
+    // 判断节点类型
+    function nodeType(name) {
+        if (/^F\d+$/i.test(name)) return 'F';
+        if (/^G\d+$/i.test(name)) return 'G';
+        if (/^S\d+$/i.test(name)) return 'S';
+        if (/^TS\d+[a-z]*$/i.test(name)) return 'TS';
+        if (/^T\d+[a-z]*$/i.test(name)) return 'T';
+        return '';
+    }
+
+    const storyData = [];
+    const optionData = [];
+    const issues = [];
+    let currentNode = '';
+    let lastStoryRow = null;  // 用于 * 继承
+
+    // 给 storyData 行设置节点名，支持 * 继承
+    function setNodeName(row, name) {
+        if (!name) {
+            row['节点名称'] = '';
+            return;
+        }
+        // 如果当前节点和上一个 storyData 行的节点相同，用 *
+        if (lastStoryRow && lastStoryRow['节点名称'] !== '*' && lastStoryRow['节点名称'] === name) {
+            row['节点名称'] = '*';
+        } else {
+            row['节点名称'] = name;
+        }
+    }
+
+    // 解析括号内容，返回 {target, value} 用于填充对应列
+    // target: 'sfx'|'cmd'|'note'|'action'|'bg'|'raw'
+    function classifyBracket(content) {
+        // 音效：（音效：枪声）（音效，心跳声）
+        if (/^音效[：,，]/.test(content)) {
+            let rest = content.replace(/^音效[：,，]/, '').trim();
+            return { target: 'sfx', value: rest };
+        }
+        // 数值操作：（白楚年战术+1）（知悉值+1）（兰波羁绊+1）
+        // 匹配 "角色名/属性名+/-数字" 模式
+        if (/^[\u4e00-\u9fa5A-Za-z0-9]+[+\-]\d+$/.test(content)) {
+            // 可能有多项：（白楚年战术+1，知悉值+1）
+            const parts = content.split(/[，,]/).map(s => s.trim()).filter(Boolean);
+            const params = [];
+            let allValid = true;
+            for (const p of parts) {
+                const m = p.match(/^([\u4e00-\u9fa5A-Za-z0-9]+)([+\-]\d+)$/);
+                if (m) {
+                    params.push(`（${m[1]}，${m[2]}）`);
+                } else {
+                    allValid = false;
+                    break;
+                }
+            }
+            if (allValid && params.length > 0) {
+                return { target: 'cmd', cmd: '数值操作', param: params.length === 1 ? params[0] : `（${parts.map(p => { const m = p.match(/^([\u4e00-\u9fa5A-Za-z0-9]+)([+\-]\d+)$/); return m[1] + '，' + m[2]; }).join('，')}）` };
+            }
+        }
+        // 解锁词条/资料解锁：（解锁词条：IOA）（资料解锁：分化等级）
+        if (/^(解锁词条|资料解锁|解锁新概念)[：:]/.test(content)) {
+            const name = content.replace(/^(解锁词条|资料解锁|解锁新概念)[：:]/, '').trim();
+            return { target: 'cmd', cmd: '小提示', param: `（解锁新概念：${name}，呼出界面，（${name}））` };
+        }
+        // 跳转剧情：（跳转T2）（分支结束，跳转T2）
+        if (/跳转\s*(T|S|F|G|TS)\d+/i.test(content)) {
+            const m = content.match(/跳转\s*((?:T|S|F|G|TS)\d+[a-z]*)/i);
+            return { target: 'cmd', cmd: '跳转剧情', param: m ? m[1] : content };
+        }
+        // 换背景/切场景
+        if (/^(换背景|切场景|切换场景)/.test(content)) {
+            return { target: 'bg_change' };
+        }
+        // 备注：（备注：xxx）
+        if (/^备注[：:]/.test(content)) {
+            return { target: 'note', value: content.replace(/^备注[：:]/, '').trim() };
+        }
+        // 角色动作（嘴硬）（微笑）（叹气）等——保留在对话内容中
+        // 如果内容很短（<=10字）且没有标点，大概率是角色动作/情绪
+        if (content.length <= 15 && !/[，。！？、；：]/.test(content)) {
+            return { target: 'action', value: `（${content}）` };
+        }
+        // 无法判断 → 备注
+        return { target: 'note', value: content };
+    }
+
+    // 将分类结果填入行
+    function applyBracketToRow(row, classification) {
+        switch (classification.target) {
+            case 'sfx':
+                row['音效'] = classification.value;
+                break;
+            case 'cmd':
+                // 多命令用逗号分隔
+                if (row['cmd命令']) {
+                    row['cmd命令'] += ',' + classification.cmd;
+                    row['命令参数'] += ',' + classification.param;
+                } else {
+                    row['cmd命令'] = classification.cmd;
+                    row['命令参数'] = classification.param;
+                }
+                break;
+            case 'note':
+                row['备注'] = classification.value;
+                break;
+            case 'action':
+                row['对话内容'] = classification.value;
+                break;
+            case 'bg_change':
+                // 留空，提示人工填写
+                row['备注'] = '需要切换背景，请匹配美术资源表';
+                break;
+        }
+    }
+
+    const lines = text.split(/\r?\n/);
+    let i = 0;
+    while (i < lines.length) {
+        const line = lines[i].trim();
+        if (!line) { i++; continue; }
+
+        // ========== 1. 节点标记识别 ==========
+        // F 节点：F1, F2, 1-F1 等（提示使用战斗预设）
+        const fightMatch = line.match(/^(?:\d+-)?(F\d+)[：:]?\s*(.*)/i);
+        if (fightMatch) {
+            currentNode = fightMatch[1];
+            issues.push(`[F节点] 检测到战斗节点 ${currentNode}，请使用「战斗表」预设单独处理`);
+            // 跳过 F 节点后续行
+            i++;
+            while (i < lines.length) {
+                const sub = lines[i].trim();
+                if (!sub || /^(T|S|F|G|TS)\d+/i.test(sub)) break;
+                i++;
+            }
+            continue;
+        }
+
+        // G 节点：G1, G2 等（按 T 表处理，备注写操作说明）
+        const gMatch = line.match(/^(?:\d+-)?(G\d+)[：:]?\s*(.*)/i);
+        if (gMatch) {
+            currentNode = gMatch[1];
+            if (gMatch[2]) {
+                const row = emptyRow();
+                setNodeName(row, currentNode);
+                row['对话内容'] = gMatch[2];
+                storyData.push(row);
+                lastStoryRow = row;
+            }
+            i++; continue;
+        }
+
+        // T/TS 节点：T0, T1, TS1a, TS2b 等（支持带卷号 1-T1, 1-TS1a）
+        const sceneMatch = line.match(/^(?:\d+-)?(T(?:S)?\d+[a-z]*)[：:]?\s*$/i);
+        if (sceneMatch) {
+            currentNode = sceneMatch[1];
+            i++; continue;
+        }
+
+        // ========== 2. 选项组标记 ==========
+        const optGroupMatch = line.match(/^(?:\d+-)?S(\d+)[：:]/);
+        if (optGroupMatch) {
+            const optGroup = 'S' + optGroupMatch[1];
+            currentNode = optGroup;
+            i++;
+            let isFirst = true;
+            while (i < lines.length) {
+                const sub = lines[i].trim();
+                if (!sub) { i++; continue; }
+                // 选项行：a：文本 或 b：文本（支持带锁标记）
+                const optMatch = sub.match(/^([a-zA-Z])[：:]\s*(.*)/);
+                if (optMatch) {
+                    const optLabel = optMatch[1].toLowerCase();
+                    let optText = optMatch[2].trim();
+                    let cmdType = '跳转剧情';
+                    let cmdParam = 'TS' + optGroupMatch[1] + optLabel;
+
+                    // 检测带锁选项（如 "确认完毕（需要知悉值>=2）"）
+                    const lockMatch = optText.match(/^(.*?)（需要(.+)）$/);
+                    if (lockMatch) {
+                        optText = lockMatch[1].trim();
+                        const condition = lockMatch[2].trim();
+                        cmdType = '跳转剧情,剧情锁';
+                        cmdParam = `TS${optGroupMatch[1]}${optLabel}，（${condition}）`;
+                    }
+
+                    const nodeName = isFirst ? optGroup : '*';
+                    optionData.push({
+                        '节点名称': nodeName,
+                        '选项名称': optText,
+                        'cmd命令': cmdType,
+                        '命令参数': cmdParam
+                    });
+                    isFirst = false;
+                    i++;
+                } else {
+                    break;
+                }
+            }
+            continue;
+        }
+
+        // S 节点无冒号后缀（如 "S1" 单独一行）——跳过，等待后续选项行
+        if (/^(?:\d+-)?S\d+$/i.test(line)) {
+            currentNode = line;
+            i++; continue;
+        }
+
+        // ========== 3. 独立括号行 ==========
+        const parenMatch = line.match(/^（(.+)）$/);
+        if (parenMatch) {
+            const content = parenMatch[1].trim();
+            const classification = classifyBracket(content);
+
+            // 命令通常和对话在同一行（或紧接下一行），优先合并到上一行对话行
+            if (lastStoryRow && (lastStoryRow['角色名称'] || lastStoryRow['对话内容'])) {
+                applyBracketToRow(lastStoryRow, classification);
+            } else {
+                const row = emptyRow();
+                setNodeName(row, currentNode);
+                applyBracketToRow(row, classification);
+                storyData.push(row);
+                lastStoryRow = row;
+            }
+            i++; continue;
+        }
+
+        // ========== 4. 【角色】对话内容 ==========
+        const bracketMatch = line.match(/^【(.*?)】(.*)$/);
+        if (bracketMatch) {
+            const role = bracketMatch[1].trim();
+            let content = bracketMatch[2].trim();
+            const row = emptyRow();
+            setNodeName(row, currentNode);
+            row['角色名称'] = (role === '*' || role === '') ? '' : role;
+
+            // 提取行尾括号（命令通常和对话在同一行）
+            // 支持多个尾部括号：如 "台词（嘴硬）（白楚年战术+1）（音效：心跳声）"
+            let mainContent = content;
+            const trailingCmds = [];  // 收集行尾的系统指令括号
+            const keptParts = [];     // 保留的正文部分
+
+            // 从行尾逐个提取括号
+            const trailingBracketRe = /（([^）]+)）$/;
+            let tempContent = content;
+            const extractedBrackets = [];  // 从尾部提取的所有括号（倒序）
+
+            // 持续从尾部提取括号
+            while (trailingBracketRe.test(tempContent)) {
+                const m = tempContent.match(trailingBracketRe);
+                const inner = m[1].trim();
+                const classification = classifyBracket(inner);
+                if (classification.target === 'cmd' || classification.target === 'sfx') {
+                    // 系统指令括号 → 提取出来
+                    extractedBrackets.unshift(classification);
+                    tempContent = tempContent.substring(0, tempContent.lastIndexOf('（')).trim();
+                } else if (classification.target === 'action') {
+                    // 角色动作 → 保留在对话中，停止提取
+                    break;
+                } else {
+                    // 备注等 → 也提取
+                    extractedBrackets.unshift(classification);
+                    tempContent = tempContent.substring(0, tempContent.lastIndexOf('（')).trim();
+                }
+            }
+
+            if (extractedBrackets.length > 0) {
+                row['对话内容'] = tempContent;
+                for (const c of extractedBrackets) {
+                    applyBracketToRow(row, c);
+                }
+            } else {
+                row['对话内容'] = content;
+            }
+
+            storyData.push(row);
+            lastStoryRow = row;
+            i++; continue;
+        }
+
+        // ========== 5. 其他行（引文、说明等） ==========
+        // ——《xxx》引文署名
+        if (/^——/.test(line) || /^—/.test(line)) {
+            const row = emptyRow();
+            setNodeName(row, currentNode);
+            row['对话内容'] = line;
+            storyData.push(row);
+            lastStoryRow = row;
+            i++; continue;
+        }
+
+        // 纯文本行（无节点标记、无角色标记）——作为旁白处理
+        if (currentNode) {
+            const row = emptyRow();
+            setNodeName(row, currentNode);
+            row['对话内容'] = line;
+            storyData.push(row);
+            lastStoryRow = row;
+        }
+        i++;
+    }
+
+    // 组装结果
+    const sheets = [
+        { name: 'StoryData', columns: storyCols, data: storyData }
+    ];
+    // OptionData 只在有数据时添加
+    if (optionData.length > 0) {
+        sheets.push({ name: 'OptionData', columns: optionCols, data: optionData });
+    }
+
+    return { sheets, issues };
+});
+
+// ---- 内置脚本：战斗节点配置（F 节点解析）----
+ScriptEngine.register('战斗节点配置', function(text, preset) {
+    const cols = preset.columns || ['节点名称','战斗名称','战斗提示','目标','可用能力','可用武器','敌方优势','敌方弱点','cmd命令','命令参数'];
+    function emptyRow() { const r = {}; for (const c of cols) r[c] = ''; return r; }
+
+    const data = [];
+    const issues = [];
+    let current = null;
+
+    const lines = text.split(/\r?\n/);
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+
+        // F 节点标记
+        const fm = line.match(/^(?:\d+-)?(F\d+)[：:]?\s*(.*)/i);
+        if (fm) {
+            if (current) data.push(current);
+            current = emptyRow();
+            current['节点名称'] = fm[1];
+            current['战斗名称'] = fm[2] || '';
+            continue;
+        }
+        if (!current) continue;
+
+        // 属性行
+        if (/^战斗提示[：:]/.test(line)) { current['战斗提示'] = line.replace(/^战斗提示[：:]/, '').trim(); continue; }
+        if (/^目标[：:]/.test(line)) { current['目标'] = line.replace(/^目标[：:]/, '').trim(); continue; }
+        if (/^可用能力[：:]/.test(line)) { current['可用能力'] = line.replace(/^可用能力[：:]/, '').trim(); continue; }
+        if (/^可用武器[：:]/.test(line)) { current['可用武器'] = line.replace(/^可用武器[：:]/, '').trim(); continue; }
+        if (/^敌方.*优势/.test(line)) { current['敌方优势'] = line.replace(/^敌方.*优势[：:]?/, '').trim(); continue; }
+        if (/^敌方.*弱点/.test(line)) { current['敌方弱点'] = line.replace(/^敌方.*弱点[：:]?/, '').trim(); continue; }
+
+        // 跳转
+        if (/跳转/.test(line)) {
+            const jm = line.match(/跳转\s*((?:T|S|F|G|TS)\d+[a-z]*)/i);
+            if (jm) { current['cmd命令'] = '跳转剧情'; current['命令参数'] = jm[1]; }
+            continue;
+        }
+
+        // 括号行
+        const pm = line.match(/^（(.+)）$/);
+        if (pm) {
+            const c = pm[1].trim();
+            if (/跳转/.test(c)) {
+                const jm = c.match(/跳转\s*((?:T|S|F|G|TS)\d+[a-z]*)/i);
+                if (jm) { current['cmd命令'] = '跳转剧情'; current['命令参数'] = jm[1]; }
+            } else if (/目标[：:]/.test(c)) { current['目标'] = c.replace(/^目标[：:]/, '').trim(); }
+            else if (/能力[：:]/.test(c)) { current['可用能力'] = c.replace(/^可用?能力[：:]/, '').trim(); }
+            else if (/武器[：:]/.test(c)) { current['可用武器'] = c.replace(/^可用?武器[：:]/, '').trim(); }
+            continue;
+        }
+
+        // 其他非空行 → 战斗提示（如果还没填）
+        if (!current['战斗提示']) {
+            current['战斗提示'] = line;
+        }
+    }
+    if (current) data.push(current);
+
+    // 自检
+    for (const row of data) {
+        if (!row['战斗名称']) issues.push(`[${row['节点名称']}] 缺少战斗名称`);
+        if (!row['cmd命令']) issues.push(`[${row['节点名称']}] 缺少 cmd命令（战斗结束后跳转到哪？）`);
+        if (!row['命令参数']) issues.push(`[${row['节点名称']}] 缺少命令参数`);
+    }
+
+    return { sheets: [{ name: 'Sheet1', columns: cols, data }], issues };
+});
+
+// ========== 预设管理 ==========
+const PresetManager = {
+    editingKey: null,
+
+    render() {
+        const list = document.getElementById('presetList');
+        const categories = {};
+        for (const [key, preset] of Object.entries(App.presets)) {
+            const cat = preset.category || '未分类';
+            if (!categories[cat]) categories[cat] = [];
+            categories[cat].push({ key, ...preset });
+        }
+
+        document.getElementById('presetCount').textContent = Object.keys(App.presets).length;
+        document.getElementById('categoryList').innerHTML = Object.keys(categories).map(c => `<option value="${c}">`).join('');
+
+        let html = '';
+        for (const [cat, items] of Object.entries(categories)) {
+            const collapsed = localStorage.getItem(`tg_cat_${cat}`) === '1';
+            html += `<div class="preset-category">`;
+            html += `<div class="preset-category-header${collapsed?' collapsed':''}" onclick="PresetManager.toggleCategory(this, '${App.escapeHtml(cat)}')">`;
+            html += `<span class="arrow">▼</span>📁 ${App.escapeHtml(cat)} <span style="color:var(--text-muted);font-size:11px;">(${items.length})</span>`;
+            html += `</div>`;
+            html += `<div class="preset-category-items"${collapsed?' style="display:none;"':''}>`;
+            for (const item of items) {
+                const active = App.currentPresetKey === item.key ? ' active' : '';
+                html += `<div class="preset-item${active}" onclick="App.selectPreset('${App.escapeHtml(item.key)}')">`;
+                html += `<span class="icon">📄</span>`;
+                html += `<span class="name">${App.escapeHtml(item.name)}</span>`;
+                html += `<span class="actions">`;
+                html += `<button class="btn-icon" title="编辑" onclick="event.stopPropagation();PresetManager.openEditModal('${App.escapeHtml(item.key)}')">✏</button>`;
+                html += `<button class="btn-icon" title="导出" onclick="event.stopPropagation();PresetManager.exportPreset('${App.escapeHtml(item.key)}')">📤</button>`;
+                html += `</span>`;
+                html += `</div>`;
+            }
+            html += `</div></div>`;
+        }
+        list.innerHTML = html || '<div style="padding:16px;color:var(--text-muted);text-align:center;">暂无预设，点击「＋ 新建」</div>';
+    },
+
+    toggleCategory(header, cat) {
+        header.classList.toggle('collapsed');
+        const items = header.nextElementSibling;
+        const collapsed = header.classList.contains('collapsed');
+        items.style.display = collapsed ? 'none' : '';
+        localStorage.setItem(`tg_cat_${cat}`, collapsed ? '1' : '0');
+    },
+
+    openCreateModal() {
+        this.editingKey = null;
+        document.getElementById('presetModalTitle').textContent = '📋 新建预设';
+        document.getElementById('btnDeletePreset').style.display = 'none';
+        this.clearForm();
+        document.getElementById('presetModal').style.display = '';
+    },
+
+    openEditModal(key) {
+        this.editingKey = key;
+        const preset = App.presets[key];
+        if (!preset) return;
+        document.getElementById('presetModalTitle').textContent = `✏ 编辑预设：${key}`;
+        document.getElementById('btnDeletePreset').style.display = '';
+        document.getElementById('presetName').value = preset.name || '';
+        document.getElementById('presetCategory').value = preset.category || '';
+        document.getElementById('presetDesc').value = preset.description || '';
+        document.getElementById('presetColumns').value = (preset.columns || []).join(', ');
+        document.getElementById('presetTemplate').value = preset.template || '';
+        document.getElementById('presetRules').value = preset.rules || '';
+        document.getElementById('presetExampleInput').value = preset.exampleInput || '';
+        document.getElementById('presetExampleOutput').value = preset.exampleOutput || '';
+        document.getElementById('presetModal').style.display = '';
+    },
+
+    clearForm() {
+        ['presetName','presetCategory','presetDesc','presetColumns','presetTemplate','presetRules','presetExampleInput','presetExampleOutput'].forEach(id => {
+            document.getElementById(id).value = '';
+        });
+    },
+
+    closeModal() {
+        document.getElementById('presetModal').style.display = 'none';
+    },
+
+    savePreset() {
+        const name = document.getElementById('presetName').value.trim();
+        const category = document.getElementById('presetCategory').value.trim() || '未分类';
+        const description = document.getElementById('presetDesc').value.trim();
+        const columnsStr = document.getElementById('presetColumns').value.trim();
+        const template = document.getElementById('presetTemplate').value.trim();
+        const rules = document.getElementById('presetRules').value.trim();
+        const exampleInput = document.getElementById('presetExampleInput').value.trim();
+        const exampleOutput = document.getElementById('presetExampleOutput').value.trim();
+
+        if (!name) { Toast.show('请输入预设名称', 'error'); return; }
+        if (!columnsStr) { Toast.show('请输入表格列名', 'error'); return; }
+
+        const columns = columnsStr.split(/[,，]/).map(s => s.trim()).filter(Boolean);
+
+        const preset = {
+            name, category, description,
+            columns,  // 保留兼容
+            template, rules,
+            exampleInput, exampleOutput,
+            version: '1.0'
+        };
+
+        // 保留已有的 sheets 和 script（编辑时）
+        if (this.editingKey) {
+            const oldPreset = App.presets[this.editingKey];
+            if (oldPreset && oldPreset.sheets) {
+                preset.sheets = oldPreset.sheets;
+            }
+            if (oldPreset && oldPreset.script) {
+                preset.script = oldPreset.script;
+            }
+        }
+
+        // 如果没有 sheets，从 columns 创建默认单Sheet
+        if (!preset.sheets) {
+            preset.sheets = [{ name: 'Sheet1', columns: [...columns] }];
+        }
+
+        // 如果改名了，删除旧 key
+        if (this.editingKey && this.editingKey !== name) {
+            delete App.presets[this.editingKey];
+        }
+
+        App.presets[name] = preset;
+        App.savePresets();
+        App.selectPreset(name);
+        this.closeModal();
+        Toast.show(`✅ 预设「${name}」已保存`, 'success');
+    },
+
+    deleteCurrent() {
+        if (!this.editingKey) return;
+        if (!confirm(`确定要删除预设「${this.editingKey}」吗？此操作不可撤销。`)) return;
+        delete App.presets[this.editingKey];
+        if (App.currentPresetKey === this.editingKey) {
+            App.currentPresetKey = null;
+            document.getElementById('currentPresetInfo').textContent = '未选择预设';
+            document.getElementById('templateHint').innerHTML = '💡 选择预设后，此处会显示输入模板提示';
+        }
+        App.savePresets();
+        this.closeModal();
+        PresetManager.render();
+        Toast.show('预设已删除', 'info');
+    },
+
+    exportPreset(key) {
+        const preset = App.presets[key];
+        if (!preset) return;
+        const json = JSON.stringify(preset, null, 2);
+        const filename = `preset_${key.replace(/[^a-zA-Z\u4e00-\u9fa5]/g,'_')}.json`;
+        App.downloadFile(filename, json, 'application/json');
+        Toast.show(`预设「${key}」已导出`, 'success');
+    },
+
+    importFromFile() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        input.multiple = true;
+        input.onchange = async () => {
+            for (const file of input.files) {
+                try {
+                    const text = await file.text();
+                    const preset = JSON.parse(text);
+                    if (preset.name && preset.columns) {
+                        App.presets[preset.name] = preset;
+                        Toast.show(`✅ 已导入：${preset.name}`, 'success');
+                    }
+                } catch {
+                    Toast.show(`文件 ${file.name} 格式错误`, 'error');
+                }
+            }
+            App.savePresets();
+            PresetManager.render();
+        };
+        input.click();
+    }
+};
+
+// ========== 表格渲染 ==========
+const TableRenderer = {
+    render() {
+        this.renderSheetTabs();
+        this._renderTable();
+    },
+
+    // 渲染 Sheet 标签页
+    renderSheetTabs() {
+        const tabsContainer = document.getElementById('sheetTabs');
+        if (!tabsContainer) return;
+
+        if (App.sheets.length <= 1) {
+            tabsContainer.innerHTML = '';
+            return;
+        }
+
+        tabsContainer.innerHTML = App.sheets.map((s, i) => {
+            const active = i === App.activeSheetIndex ? ' active' : '';
+            return `<span class="sheet-tab${active}" onclick="App.switchSheet(${i})" title="${App.escapeHtml(s.name)}：${s.columns.length}列 ${s.data.length}行">${App.escapeHtml(s.name)}<span class="badge">${s.data.length}</span></span>`;
+        }).join('');
+    },
+
+    // 渲染当前激活 Sheet 的表格
+    _renderTable() {
+        const wrapper = document.getElementById('tableWrapper');
+        const empty = document.getElementById('tableEmpty');
+
+        if (App.tableData.length === 0) {
+            wrapper.innerHTML = '';
+            if (empty) {
+                wrapper.appendChild(empty);
+                empty.style.display = '';
+            }
+            document.getElementById('rowCount').textContent = '';
+            return;
+        }
+
+        if (empty) empty.style.display = 'none';
+
+        empty.style.display = 'none';
+        const sheetLabel = App.sheets.length > 1 ? `[${App.activeSheet.name}] ` : '';
+        document.getElementById('rowCount').textContent = `${sheetLabel}(${App.tableData.length} 行 × ${App.columns.length} 列)`;
+
+        // 获取当前预设的枚举定义和命令参数格式
+        const preset = App.currentPresetKey ? App.presets[App.currentPresetKey] : null;
+        const enums = preset ? (preset.enums || {}) : {};
+        const cmdParamFormats = preset ? (preset.cmdParamFormats || {}) : {};
+
+        const cols = App.columns;
+        let html = '<table><thead><tr><th class="row-index">#</th>';
+        for (const col of cols) {
+            const hasEnum = enums[col] ? ' title="枚举列：' + App.escapeHtml(enums[col].join('/')) + '"' : '';
+            html += `<th${hasEnum}>${App.escapeHtml(col)}${enums[col] ? ' 🔹' : ''}<span class="col-drag"></span></th>`;
+        }
+        html += '</tr></thead><tbody>';
+        for (let i = 0; i < App.tableData.length; i++) {
+            const row = App.tableData[i];
+            html += `<tr data-row="${i}" onclick="TableRenderer.selectRow(${i}, event)">`;
+            html += `<td class="row-index">${i + 1}</td>`;
+            for (const col of cols) {
+                const val = row[col] ?? '';
+                const strVal = String(val);
+                // 枚举校验：支持逗号分隔的多值
+                let tdClass = '';
+                let tooltip = App.escapeHtml(strVal);
+                if (enums[col] && strVal.trim()) {
+                    const enumSet = enums[col];
+                    const parts = strVal.split(/[,，]/).map(s => s.trim()).filter(Boolean);
+                    const allMatch = parts.every(p => enumSet.includes(p));
+                    if (allMatch && parts.length > 0) {
+                        tdClass = ' class="enum-match"';
+                    } else {
+                        const unmatched = parts.filter(p => !enumSet.includes(p));
+                        tdClass = ' class="enum-warn"';
+                        tooltip = `未匹配枚举: ${unmatched.join(', ')}&#10;有效值: ${enumSet.join('/')}`;
+                    }
+                }
+                // 命令参数列：根据同行 cmd命令 显示格式提示
+                if (col === '命令参数' && strVal.trim()) {
+                    const cmdVal = row['cmd命令'] ?? '';
+                    const fmt = cmdParamFormats[cmdVal];
+                    if (fmt) {
+                        let fmtTip = `【${cmdVal}】${fmt.desc}`;
+                        if (fmt.example) fmtTip += `&#10;示例: ${fmt.example}`;
+                        // 追加子枚举提示（如数值名称列表）
+                        if (fmt.paramEnum) {
+                            for (const [k, vals] of Object.entries(fmt.paramEnum)) {
+                                if (vals && vals.length > 0) {
+                                    fmtTip += `&#10;${k}: ${vals.join('/')}`;
+                                }
+                            }
+                        }
+                        tooltip = fmtTip;
+                        if (!tdClass) tdClass = ' class="param-hint"';
+                    }
+                }
+                html += `<td${tdClass} ondblclick="TableRenderer.startEdit(${i}, '${App.escapeHtml(col)}', this)" title="${tooltip}">${App.escapeHtml(strVal)}</td>`;
+            }
+            html += '</tr>';
+        }
+        html += '</tbody></table>';
+        wrapper.innerHTML = html;
+
+        // 把 empty 元素放回 DOM（隐藏），确保后续渲染时能访问到
+        if (empty) {
+            empty.style.display = 'none';
+            wrapper.appendChild(empty);
+        }
+    },
+
+    selectRow(index, event) {
+        const tr = event.currentTarget;
+        // Toggle selection
+        if (event.ctrlKey || event.metaKey) {
+            tr.classList.toggle('row-selected');
+        } else {
+            document.querySelectorAll('.table-wrapper tr.row-selected').forEach(r => r.classList.remove('row-selected'));
+            tr.classList.add('row-selected');
+        }
+    },
+
+    startEdit(rowIdx, colName, td) {
+        const oldVal = App.tableData[rowIdx][colName] ?? '';
+        td.classList.add('editing');
+        // 检查是否有枚举定义
+        const preset = App.currentPresetKey ? App.presets[App.currentPresetKey] : null;
+        const enums = preset ? (preset.enums || {}) : {};
+        const cmdParamFormats = preset ? (preset.cmdParamFormats || {}) : {};
+        const enumVals = enums[colName];
+
+        // 命令参数列：根据同行 cmd命令 显示格式提示
+        let fmtHint = '';
+        if (colName === '命令参数') {
+            const cmdVal = App.tableData[rowIdx]['cmd命令'] ?? '';
+            const fmt = cmdParamFormats[cmdVal];
+            if (fmt) {
+                let tip = `<b>${cmdVal}</b>: ${fmt.desc}`;
+                if (fmt.example) tip += `<br><code>${App.escapeHtml(fmt.example)}</code>`;
+                if (fmt.paramEnum) {
+                    for (const [k, vals] of Object.entries(fmt.paramEnum)) {
+                        if (vals && vals.length > 0) tip += `<br><i>${k}</i>: ${vals.slice(0, 8).join('/')}${vals.length > 8 ? '...' : ''}`;
+                    }
+                }
+                fmtHint = `<div class="edit-fmt-hint">${tip}</div>`;
+            }
+        }
+
+        if (enumVals) {
+            // 用下拉框编辑枚举列
+            let opts = `<option value="">-- 选择 --</option>`;
+            for (const v of enumVals) {
+                const sel = v === oldVal ? ' selected' : '';
+                opts += `<option value="${App.escapeHtml(v)}"${sel}>${App.escapeHtml(v)}</option>`;
+            }
+            // 添加"自定义"选项，允许输入非枚举值
+            const isCustom = oldVal && !enumVals.includes(oldVal);
+            opts += `<option value="__custom__" ${isCustom ? 'selected' : ''}>✏️ 自定义...</option>`;
+            td.innerHTML = `${fmtHint}<select onchange="TableRenderer.finishEdit(${rowIdx}, '${App.escapeHtml(colName)}', this)" onkeydown="if(event.key==='Escape'){this.value='${App.escapeHtml(oldVal)}';this.blur();}">${opts}</select>`;
+            const sel = td.querySelector('select');
+            sel.focus();
+            // 如果选了"自定义"，切到文本输入
+            sel.addEventListener('change', function() {
+                if (this.value === '__custom__') {
+                    td.innerHTML = `${fmtHint}<input value="${App.escapeHtml(oldVal)}" placeholder="输入自定义值" onblur="TableRenderer.finishEdit(${rowIdx}, '${App.escapeHtml(colName)}', this)" onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value='${App.escapeHtml(oldVal)}';this.blur();}">`;
+                    const inp = td.querySelector('input');
+                    inp.focus();
+                    inp.select();
+                }
+            });
+        } else {
+            // 普通文本编辑
+            const placeholder = colName === '命令参数' ? ' placeholder="参考上方格式提示"' : '';
+            td.innerHTML = `${fmtHint}<input value="${App.escapeHtml(oldVal)}"${placeholder} onblur="TableRenderer.finishEdit(${rowIdx}, '${App.escapeHtml(colName)}', this)" onkeydown="if(event.key==='Enter')this.blur();if(event.key==='Escape'){this.value='${App.escapeHtml(oldVal)}';this.blur();}">`;
+            const input = td.querySelector('input');
+            input.focus();
+            input.select();
+        }
+    },
+
+    finishEdit(rowIdx, colName, input) {
+        const newVal = input.value;
+        App.tableData[rowIdx][colName] = newVal;
+        this.render();
+        Toast.show('单元格已更新', 'info', 1500);
+    },
+
+    addRow() {
+        if (App.columns.length === 0) {
+            Toast.show('请先加载表格数据或设置列', 'error');
+            return;
+        }
+        const newRow = {};
+        for (const col of App.columns) newRow[col] = '';
+        App.tableData.push(newRow);
+        this.render();
+        Toast.show('已添加空行', 'success');
+    },
+
+    addColumn() {
+        const name = prompt('请输入新列名：');
+        if (!name || !name.trim()) return;
+        const colName = name.trim();
+        if (App.columns.includes(colName)) { Toast.show('列名已存在', 'error'); return; }
+        App.columns.push(colName);
+        for (const row of App.tableData) row[colName] = '';
+        this.render();
+        Toast.show(`已添加列：${colName}`, 'success');
+    }
+};
+
+// ========== 启动 ==========
+document.addEventListener('DOMContentLoaded', () => App.init());
+</script>
+
+</body>
+</html>

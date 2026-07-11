@@ -1,0 +1,11 @@
+{
+  "name": "战斗角色",
+  "category": "战斗数据",
+  "description": "解析战斗角色配置，对应 BattleCharacterTableConfig 的 Excel 结构",
+  "columns": ["角色ID", "角色名称", "HP", "ATK", "DEF", "SPD", "技能列表", "标签", "描述"],
+  "template": "角色ID: char_001\n角色名称: 炎之战士\nHP: 1000\nATK: 150\nDEF: 80\nSPD: 120\n技能: skill_fire_slash,skill_flame_burst\n标签: 火属性,近战\n描述: 驾驭火焰的近战战士",
+  "rules": "## 解析规则（战斗角色 → BattleCharacterTableConfig 表格）\n\n### 输入格式\n\n| 字段 | 说明 | 必填 |\n|------|------|------|\n| 角色ID | 角色唯一标识 | ✅ |\n| 角色名称 | 角色显示名称 | ✅ |\n| HP | 生命值 | ✅ |\n| ATK | 攻击力 | ✅ |\n| DEF | 防御力 | ✅ |\n| SPD | 速度 | ✅ |\n| 技能列表 | 拥有的技能ID（逗号分隔） | ❌ |\n| 标签 | 角色标签（逗号分隔） | ❌ |\n| 描述 | 角色背景描述 | ❌ |\n\n### 规则\n1. 数值字段（HP/ATK/DEF/SPD）解析为整数\n2. 技能列表和标签为逗号分隔的数组，存储为 JSON 字符串\n3. 空行或 `---` 分隔不同角色",
+  "exampleInput": "角色ID: char_fire_01\n角色名称: 炎之战士\nHP: 1000\nATK: 150\nDEF: 80\nSPD: 120\n技能: skill_fire_slash,skill_flame_burst\n标签: 火属性,近战,前排\n描述: 驾驭火焰之力的前线战士。\n\n角色ID: char_ice_01\n角色名称: 冰之法师\nHP: 650\nATK: 200\nDEF: 40\nSPD: 90\n技能: skill_ice_storm,skill_frost_armor\n标签: 冰属性,远程,后排\n描述: 掌控冰霜的远程法师。",
+  "exampleOutput": "[{\"角色ID\":\"char_fire_01\",\"角色名称\":\"炎之战士\",\"HP\":\"1000\",\"ATK\":\"150\",\"DEF\":\"80\",\"SPD\":\"120\",\"技能列表\":\"skill_fire_slash,skill_flame_burst\",\"标签\":\"火属性,近战,前排\",\"描述\":\"驾驭火焰之力的前线战士。\"}]",
+  "version": "1.0"
+}
